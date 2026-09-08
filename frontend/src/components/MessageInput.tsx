@@ -4,11 +4,13 @@ import { Icon } from "./Icon";
 interface MessageInputProps {
   onSend: (content: string) => boolean;
   disabled: boolean;
+  roomName: string;
 }
 
 export function MessageInput({
   onSend,
   disabled,
+  roomName,
 }: MessageInputProps) {
   const [content, setContent] = useState("");
 
@@ -31,7 +33,7 @@ export function MessageInput({
       onSubmit={handleSubmit}
     >
       <input
-        aria-label="Mensagem para a Sala Geral"
+        aria-label={`Mensagem para ${roomName}`}
         aria-describedby="composer-hint"
         type="text"
         placeholder="Digite sua mensagem..."

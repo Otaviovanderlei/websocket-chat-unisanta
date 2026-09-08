@@ -7,6 +7,8 @@
 
         public string Content { get; set; } = string.Empty;
 
+        public string RoomId { get; set; } = string.Empty;
+
         public DateTimeOffset Timestamp { get; set; }
     }
 }
