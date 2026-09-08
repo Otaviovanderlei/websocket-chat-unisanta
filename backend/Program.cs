@@ -35,9 +35,16 @@ app.Map("/ws", async context =>
         return;
     }
 
+    var roomId = context.Request.Query["roomId"].ToString().Trim().ToLowerInvariant();
+
+    if (string.IsNullOrWhiteSpace(roomId))
+    {
+        roomId = "geral";
+    }
+
     var webSocket = await context.WebSockets.AcceptWebSocketAsync();
     var handler = context.RequestServices.GetRequiredService<ChatWebSocketHandler>();
-    await handler.HandleAsync(webSocket, context.RequestAborted);
+    await handler.HandleAsync(webSocket, roomId, context.RequestAborted);
 });
 
 app.Run();
