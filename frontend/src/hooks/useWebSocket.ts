@@ -25,7 +25,7 @@ export function useWebSocket() {
         setMessages((currentMessages) => [
           ...currentMessages,message,
         ]);
-      } catch (error) {
+      } catch {
         console.error("Mensagem inválida recebida:", event.data);
       }
     };

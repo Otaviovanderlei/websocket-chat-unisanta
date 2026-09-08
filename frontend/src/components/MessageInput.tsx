@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Icon } from "./Icon";
 
 interface MessageInputProps {
-  onSend: (content: string) => void;
+  onSend: (content: string) => boolean;
   disabled: boolean;
 }
 
@@ -16,32 +17,42 @@ export function MessageInput({
 
     const normalizedContent = content.trim();
 
-    if (!normalizedContent) {
+    if (disabled || !normalizedContent) {
       return;
     }
 
-    onSend(normalizedContent);
-
-    setContent("");
+    if (onSend(normalizedContent)) setContent("");
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div className="composer">
+    <form
+      className="message-form"
+      onSubmit={handleSubmit}
+    >
       <input
+        aria-label="Mensagem para a Sala Geral"
+        aria-describedby="composer-hint"
         type="text"
-        placeholder="Digite sua mensagem"
+        placeholder="Digite sua mensagem..."
         value={content}
         onChange={(event) =>
           setContent(event.target.value)
         }
+        disabled={disabled}
       />
 
       <button
         type="submit"
-        disabled={disabled}
+        disabled={disabled || !content.trim()}
+        aria-label="Enviar mensagem"
+        title="Enviar mensagem (Enter)"
       >
-        Enviar
+        <span>Enviar</span><Icon name="send" />
       </button>
     </form>
+    <p className="composer-hint" id="composer-hint">{disabled ? "Sem conexão. Recarregue a página para tentar conectar novamente." : "Pressione Enter para enviar. Todos na sala podem ver suas mensagens."}</p>
+    </div>
   );
 }
+   
