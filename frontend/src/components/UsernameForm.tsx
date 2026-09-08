@@ -54,7 +54,7 @@ export function UsernameForm({
           onChange={(event) => { setUsername(event.target.value); setError(""); }}
         />
 
-        {error ? <p className="form-error" id="username-error" role="alert">{error}</p> : <p className="field-hint" id="username-hint">Esse nome será visível para todos na Sala Geral.</p>}
+        {error ? <p className="form-error" id="username-error" role="alert">{error}</p> : <p className="field-hint" id="username-hint">Esse nome será visível nas salas em que você conversar.</p>}
         <button type="submit">
           Entrar no chat <span aria-hidden="true">→</span>
         </button>
