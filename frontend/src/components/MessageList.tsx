@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "../types/ChatMessage";
+import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -14,12 +16,14 @@ export function MessageList({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "end",
     });
   }, [messages]);
 
   return (
-    <div className="message-list">
+    <div className="message-list" role="log" aria-label="Mensagens da Sala Geral" aria-live="polite" aria-relevant="additions" tabIndex={0}>
+      {messages.length === 0 && <div className="empty-state"><span className="empty-icon"><Icon name="chat" /></span><span className="eyebrow">SALA GERAL</span><h2>Uma conversa começa com um olá.</h2><p>Nenhuma mensagem ainda.<br />Envie uma mensagem para iniciar a conversa.</p><span className="empty-tag">Ideias, encontros e novas conexões.</span></div>}
       {messages.map((message, index) => {
         const isOwnMessage =
           message.sender === currentUsername;
@@ -34,11 +38,15 @@ export function MessageList({
             }
           >
             <div className="message-bubble">
-              <strong>{message.sender}</strong>
+              <strong className="message-sender">
+                {message.sender}
+              </strong>
 
-              <p>{message.content}</p>
+              <p className="message-content">
+                {message.content}
+              </p>
 
-              <small>
+              <small className="message-time">
                 {new Date(
                   message.timestamp
                 ).toLocaleTimeString([], {
@@ -47,6 +55,7 @@ export function MessageList({
                 })}
               </small>
             </div>
+            <Avatar name={message.sender} />
           </div>
         );
       })}
