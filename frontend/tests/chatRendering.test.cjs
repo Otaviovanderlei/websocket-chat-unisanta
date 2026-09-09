@@ -20,7 +20,8 @@ function loadComponents() {
   function load(filename) {
     filename = path.resolve(filename);
     if (cache.has(filename)) return cache.get(filename);
-    const source = fs.readFileSync(filename, 'utf8').replace('import.meta.env.VITE_WS_URL', '"wss://example.test/ws"');
+    const source = fs.readFileSync(filename, 'utf8').replace('import.meta.env.VITE_WS_URL', '"wss://example.test/ws"')
+      .replace('import.meta.env.VITE_API_URL', '"https://example.test"');
     const compiled = ts.transpileModule(source, { compilerOptions: {
       module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2023, jsx: ts.JsxEmit.ReactJSX,
     } }).outputText;
@@ -34,6 +35,7 @@ function loadComponents() {
         if (specifier === 'react') return hooks;
         if (!specifier.startsWith('.')) return require(specifier);
         const base = path.resolve(path.dirname(filename), specifier);
+        if (specifier.endsWith('.webp')) return { default: base };
         return load([base, `${base}.ts`, `${base}.tsx`].find(candidate => fs.existsSync(candidate)));
       },
     });
@@ -64,7 +66,7 @@ test('each room renders one empty state, and its first message removes that stat
   const { MessageList } = load('src/components/MessageList.tsx');
   const { CHAT_ROOMS } = load('src/config/chatRooms.ts');
   for (const room of CHAT_ROOMS) {
-    const props = { roomId: room.id, roomName: room.name, currentUsername: 'Otávio' };
+    const props = { roomId: room.id, roomName: room.name, currentUsername: 'Otávio', isHistoryLoading: false, historyError: '' };
     const empty = renderToStaticMarkup(React.createElement(MessageList, { ...props, messages: [] }));
     assert.equal((empty.match(/class="empty-state"/g) ?? []).length, 1);
     assert.equal((empty.match(/role="log"/g) ?? []).length, 1);
@@ -78,4 +80,18 @@ test('each room renders one empty state, and its first message removes that stat
     assert.ok(filled.includes('own-message'));
     assert.ok(filled.includes('other-message'));
   }
+});
+
+test('history loading and errors do not announce an empty room or hide live messages', () => {
+  const { MessageList } = loadComponents()('src/components/MessageList.tsx');
+  const props = { roomId: 'frontend', roomName: 'Frontend', currentUsername: 'Otávio', messages: [], isHistoryLoading: true, historyError: '' };
+  const loading = renderToStaticMarkup(React.createElement(MessageList, props));
+  assert.ok(loading.includes('Carregando mensagens'));
+  assert.equal(loading.includes('empty-state'), false);
+  const error = renderToStaticMarkup(React.createElement(MessageList, { ...props, isHistoryLoading: false, historyError: 'Falha no histórico' }));
+  assert.ok(error.includes('Falha no histórico'));
+  assert.equal(error.includes('empty-state'), false);
+  const live = renderToStaticMarkup(React.createElement(MessageList, { ...props, messages: [{ sender: 'Otávio', content: 'Live while loading', roomId: 'frontend', timestamp: '2026-09-08T18:00:00Z' }] }));
+  assert.ok(live.includes('Live while loading'));
+  assert.equal((live.match(/role="log"/g) ?? []).length, 1);
 });
