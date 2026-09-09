@@ -5,15 +5,11 @@ using WebSocketChat.Api.WebSockets;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var chatDatabaseConnection = builder.Configuration.GetConnectionString("ChatDatabase")
-?? throw new InvalidOperationException("Connection string 'ChatDatabase' não encontrada.");
-Console.WriteLine(
-    $"Diretório de execução: {Directory.GetCurrentDirectory()}"
-);
-
-Console.WriteLine(
-    $"Connection string SQLite: {chatDatabaseConnection}"
-);
+var chatDatabaseConnection =
+    builder.Configuration.GetConnectionString("ChatDatabase")
+    ?? throw new InvalidOperationException(
+        "Connection string 'ChatDatabase' nÃ£o encontrada."
+    );
 
 builder.Services.AddDbContextFactory<ChatDbContext>(
     options =>
@@ -24,10 +20,6 @@ builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-builder.Services.AddSingleton<WebSocketConnectionManager>();
-builder.Services.AddSingleton<ChatMessagePersistenceService>();
-builder.Services.AddSingleton<ChatWebSocketHandler>();
 
 builder.Services.AddCors(options =>
 {
@@ -40,7 +32,23 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddSingleton<WebSocketConnectionManager>();
+builder.Services.AddSingleton<ChatMessagePersistenceService>();
+builder.Services.AddSingleton<ChatWebSocketHandler>();
+
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContextFactory =
+        scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<ChatDbContext>>();
+
+    await using var dbContext =
+        await dbContextFactory.CreateDbContextAsync();
+
+    await dbContext.Database.MigrateAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -48,7 +56,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("Frontend");
 
@@ -62,20 +73,36 @@ app.Map("/ws", async context =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
     {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        context.Response.StatusCode =
+            StatusCodes.Status400BadRequest;
+
         return;
     }
 
-    var roomId = context.Request.Query["roomId"].ToString().Trim().ToLowerInvariant();
+    var roomId =
+        context.Request.Query["roomId"]
+            .ToString()
+            .Trim()
+            .ToLowerInvariant();
 
     if (string.IsNullOrWhiteSpace(roomId))
     {
         roomId = "geral";
     }
 
-    var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-    var handler = context.RequestServices.GetRequiredService<ChatWebSocketHandler>();
-    await handler.HandleAsync(webSocket, roomId, context.RequestAborted);
+    var webSocket =
+        await context.WebSockets
+            .AcceptWebSocketAsync();
+
+    var handler =
+        context.RequestServices
+            .GetRequiredService<ChatWebSocketHandler>();
+
+    await handler.HandleAsync(
+        webSocket,
+        roomId,
+        context.RequestAborted
+    );
 });
 
 app.Run();
