@@ -2,6 +2,7 @@ import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { CHAT_ROOMS, type ChatRoom } from "../config/chatRooms";
+import { UnisantaLogo } from "./UnisantaLogo";
 
 interface ChatSidebarProps {
   username: string;
@@ -12,7 +13,8 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ username, isConnected, currentRoom, onRoomSelect }: ChatSidebarProps) {
   return <aside className="chat-sidebar" aria-label="Conversas">
-    <div className="brand"><span className="brand-mark"><Icon name="chat" /></span><div><strong>WebSocket Chat</strong><small>UNISANTA · CONECTE-SE</small></div></div>
+    <UnisantaLogo variant="sidebar" />
+    <div className="brand"><span className="brand-mark"><Icon name="chat" /></span><div><strong>PeopleWare Chat</strong><small>UNISANTA · Turma B</small></div></div>
     <div className="section-label">Conversas <span>{String(CHAT_ROOMS.length).padStart(2, "0")}</span></div>
     <nav className="room-list" aria-label="Salas de conversa">
       {CHAT_ROOMS.map((room) => <button type="button" key={room.id} className="room-item" aria-pressed={currentRoom.id === room.id} onClick={() => onRoomSelect(room)}>

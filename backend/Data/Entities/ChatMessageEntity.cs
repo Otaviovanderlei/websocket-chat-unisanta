@@ -1,7 +1,8 @@
-﻿namespace WebSocketChat.Api.Models
+﻿namespace WebSocketChat.Api.Data.Entities
 {
-    public class ChatMessage
+    public class ChatMessageEntity
     {
+        public long Id { get; set; }
 
         public string Sender { get; set; } = string.Empty;
 
@@ -9,6 +10,6 @@
 
         public string RoomId { get; set; } = string.Empty;
 
-        public DateTimeOffset Timestamp { get; set; }
+        public DateTime TimestampUtc { get; set; }
     }
 }
