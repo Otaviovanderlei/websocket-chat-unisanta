@@ -28,3 +28,8 @@ npm-debug.log*
 # Operating System
 .DS_Store
 Thumbs.db
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
