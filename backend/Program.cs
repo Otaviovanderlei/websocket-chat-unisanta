@@ -21,12 +21,32 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+<<<<<<< Updated upstream
+=======
+builder.Services.AddSingleton<WebSocketConnectionManager>();
+builder.Services.AddSingleton<ChatMessagePersistenceService>();
+builder.Services.AddSingleton<ChatWebSocketHandler>();
+
+var frontendOrigin =
+    builder.Configuration["FRONTEND_ORIGIN"];
+
+>>>>>>> Stashed changes
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
+        var allowedOrigins = new List<string>
+        {
+            "http://localhost:5173"
+        };
+
+        if (!string.IsNullOrWhiteSpace(frontendOrigin))
+        {
+            allowedOrigins.Add(frontendOrigin);
+        }
+
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(allowedOrigins.ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
