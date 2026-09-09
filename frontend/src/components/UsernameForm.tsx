@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Icon } from "./Icon";
 import { ThemeToggle } from "./ThemeToggle";
 import type { Theme } from "../hooks/useTheme";
+import { UnisantaLogo } from "./UnisantaLogo";
 
 interface UsernameFormProps {
   onEnter: (username: string) => void;
@@ -32,12 +33,12 @@ export function UsernameForm({
 
   return (
     <main className="entry-page">
-      <div className="entry-brand"><span className="brand-mark"><Icon name="chat" /></span><strong>WebSocket Chat</strong><span className="entry-university">UNISANTA</span><ThemeToggle theme={theme} onToggle={onToggleTheme} /></div>
+      <div className="entry-brand"><span className="brand-mark"><Icon name="chat" /></span><strong>PeopleWare Chat</strong><span className="entry-university">UNISANTA</span><ThemeToggle theme={theme} onToggle={onToggleTheme} /></div>
       <div className="username-container">
       <form onSubmit={handleSubmit} noValidate>
-        <span className="entry-icon"><Icon name="chat" /></span>
-        <span className="eyebrow">MENOS DISTÂNCIA. MAIS CONVERSA.</span>
-        <h1>WebSocket Chat</h1>
+        <UnisantaLogo variant="login" />
+    
+        <h1>PeopleWare Chat</h1>
 
         <p className="entry-description">Converse em tempo real de qualquer lugar.<br />Sua próxima conversa começa aqui.</p>
 
@@ -61,7 +62,7 @@ export function UsernameForm({
         <div className="entry-footnote"><span className="status-dot" aria-hidden="true" />Comunicação em tempo real</div>
       </form>
       </div>
-      <footer className="entry-footer">Um espaço para compartilhar ideias.<span>WebSocket Chat · UNISANTA</span></footer>
+      <footer className="entry-footer">Um espaço para compartilhar ideias.<span>PeopleWare Chat · UNISANTA</span></footer>
     </main>
   );
 }

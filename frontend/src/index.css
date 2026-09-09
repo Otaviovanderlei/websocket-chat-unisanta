@@ -237,3 +237,37 @@ body, main, aside, header, a, input, button, .conversation, .composer,
   .mobile-room-selector select:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
   .chat-header, .mobile-room-selector, .composer { flex-shrink: 0; }
 }
+
+.history-status { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.6; text-align: center; }
+.history-error { color: var(--danger); }
+
+/* Institutional mark: original colors and full image in both themes. */
+.unisanta-logo-frame {
+  display: block;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+}
+.unisanta-logo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.unisanta-logo-frame--sidebar { margin: 0 0 14px 8px; }
+.unisanta-logo--sidebar { width: auto; height: 48px; }
+.unisanta-logo-frame--login { align-self: center; margin: 0 auto 18px; }
+.unisanta-logo--login { width: 180px; }
+:root[data-theme="dark"] .unisanta-logo-frame {
+  background: #c9d2e3;
+  border-color: #a5b4cc;
+}
+@media (max-width: 700px) {
+  .unisanta-logo--login { width: 150px; }
+}
+@media (max-height: 700px) and (min-width: 701px) {
+  .unisanta-logo--sidebar { height: 36px; }
+  .unisanta-logo-frame--sidebar { margin-bottom: 8px; }
+}

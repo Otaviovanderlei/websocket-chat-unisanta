@@ -21,6 +21,8 @@ function App() {
     messages,
     isConnected,
     sendMessage,
+    isHistoryLoading,
+    historyError,
   } = useWebSocket(currentRoom.id);
 
   function handleEnter(username: string) {
@@ -67,6 +69,8 @@ function App() {
       </div>
 
       <MessageList
+        isHistoryLoading={isHistoryLoading}
+        historyError={historyError}
         roomId={currentRoom.id}
         roomName={currentRoom.name}
         messages={messages}

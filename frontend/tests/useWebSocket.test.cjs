@@ -7,13 +7,26 @@ const ts = require('typescript');
 // Exercise the hook with a deterministic hook lifecycle and WebSocket transport.
 // No browser or running backend is required; server broadcast is simulated.
 const source = fs.readFileSync('src/hooks/useWebSocket.ts', 'utf8')
-  .replace('import.meta.env.VITE_WS_URL', '"wss://example.test/ws?token=test&roomId=old"');
+  .replace('import.meta.env.VITE_WS_URL', '"wss://example.test/ws?token=test&roomId=old"')
+  .replace('import.meta.env.VITE_API_URL', '"https://example.test"');
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2023 },
 }).outputText;
+const messageUtils = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/utils/messages.ts', 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2023 },
+}).outputText, messageUtils);
 
 function environment() {
   const sockets = [];
+  const requests = [];
+  function fetch(url, { signal }) {
+    return new Promise((resolve, reject) => requests.push({
+      url, signal, reject,
+      // Deliberately permit resolving after abort to test the stale-result guard.
+      resolve: (data, status = 200) => resolve({ ok: status === 200, status, json: async () => data }),
+    }));
+  }
   class Socket {
     static CONNECTING = 0;
     static OPEN = 1;
@@ -47,7 +60,7 @@ function environment() {
         }
       },
     };
-    const context = { exports: {}, require: () => hooks, URL, WebSocket: Socket, console: { error() {} } };
+    const context = { exports: {}, require: name => name === 'react' ? hooks : messageUtils.exports, URL, AbortController, fetch, WebSocket: Socket, console: { error() {} } };
     vm.runInNewContext(compiled, context);
     function render(room = currentRoom, commit = true) {
       currentRoom = room; cursor = 0; pending = [];
@@ -58,7 +71,7 @@ function environment() {
     render();
     return { render, unmount: () => slots.forEach(slot => slot?.cleanup?.()) };
   }
-  return { client, sockets };
+  return { client, sockets, requests };
 }
 
 test('broadcast stays in the selected room, history survives switching, payload stays unchanged', () => {
@@ -128,4 +141,81 @@ test('repeated room switches keep at most one active socket and detach every old
   }
   a.unmount();
   assert.equal(sockets.filter(socket => socket.readyState < 2).length, 0);
+});
+
+const settle = () => new Promise(resolve => setImmediate(resolve));
+const persisted = (content, roomId = 'frontend', timestamp = '2026-09-08T18:00:00Z') => ({ sender: 'Otávio', content, roomId, timestamp });
+
+test('history merges with live messages in either arrival order and survives a fresh client', async () => {
+  const { client, sockets, requests } = environment();
+  const a = client('frontend');
+  sockets[0].open();
+  assert.equal(a.render().isHistoryLoading, true);
+  assert.equal(requests[0].url.pathname, '/api/messages');
+  assert.equal(requests[0].url.searchParams.get('roomId'), 'frontend');
+  assert.equal(requests[0].url.searchParams.get('limit'), '50');
+  const live = persisted('Live', 'frontend', '2026-09-08T19:00:00Z');
+  sockets[0].receive(live);
+  requests[0].resolve([live, persisted('Teste SQLite 5000'), persisted('Wrong room', 'backend')]);
+  await settle();
+  assert.equal(a.render().messages.map(m => m.content).join('|'), 'Teste SQLite 5000|Live');
+  sockets[0].receive(live);
+  assert.equal(a.render().messages.length, 2);
+  assert.equal(a.render().isHistoryLoading, false);
+  a.unmount();
+  const b = client('frontend');
+  requests[1].resolve([persisted('Teste SQLite 5000'), live]);
+  await settle();
+  assert.equal(b.render().messages.length, 2);
+  b.unmount();
+});
+
+test('aborted history cannot overwrite state after rapid room changes or a return to the same room', async () => {
+  const { client, requests } = environment();
+  const a = client('geral');
+  a.render('frontend');
+  a.render('backend');
+  assert.equal(requests[0].signal.aborted, true);
+  assert.equal(requests[1].signal.aborted, true);
+  requests[0].resolve([persisted('Geral', 'geral')]);
+  requests[1].resolve([persisted('Stale')]);
+  requests[2].resolve([persisted('Backend', 'backend')]);
+  await settle();
+  assert.equal(a.render().messages.map(m => m.content).join('|'), 'Backend');
+  a.render('frontend');
+  assert.equal(a.render().isHistoryLoading, true);
+  assert.equal(a.render().messages.length, 0);
+  requests[3].resolve([persisted('Fresh')]);
+  await settle();
+  assert.equal(a.render().messages.map(m => m.content).join('|'), 'Fresh');
+  a.unmount();
+  assert.equal(requests[3].signal.aborted, true);
+});
+
+test('REST failures leave WebSocket send and receive working', async () => {
+  for (const failure of ['network', 'http', 'invalid']) {
+    const { client, sockets, requests } = environment();
+    const a = client('frontend');
+    sockets[0].open();
+    if (failure === 'network') requests[0].reject(new Error('Offline'));
+    else if (failure === 'http') requests[0].resolve([], 500);
+    else requests[0].resolve({ unexpected: true });
+    await settle();
+    assert.equal(a.render().isHistoryLoading, false);
+    assert.ok(a.render().historyError);
+    assert.equal(a.render().isConnected, true);
+    assert.equal(a.render().sendMessage('Otávio', 'Still online'), true);
+    assert.equal(a.render().messages.length, 1);
+    a.unmount();
+  }
+});
+
+test('merge uses all message fields and sorts without mutating inputs', () => {
+  const first = persisted('Same');
+  const later = persisted('Same', 'frontend', '2026-09-08T19:00:00Z');
+  const current = [later];
+  const merged = messageUtils.exports.mergeMessages(current, [first, first, { ...first, sender: 'João' }, { ...first, roomId: 'backend' }]);
+  assert.equal(merged.length, 4);
+  assert.equal(merged.at(-1).timestamp, later.timestamp);
+  assert.equal(current.length, 1);
 });

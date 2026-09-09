@@ -8,6 +8,8 @@ interface MessageListProps {
   currentUsername: string;
   roomName: string;
   roomId: string;
+  isHistoryLoading: boolean;
+  historyError: string;
 }
 
 export function MessageList({
@@ -15,6 +17,8 @@ export function MessageList({
   currentUsername,
   roomName,
   roomId,
+  isHistoryLoading,
+  historyError,
 }: MessageListProps) {
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const previousRoomRef = useRef(roomId);
@@ -29,11 +33,13 @@ export function MessageList({
       top: list.scrollHeight,
       behavior: roomChanged || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
     });
-  }, [messages, roomId]);
+  }, [messages, roomId, isHistoryLoading]);
 
   return (
     <div ref={messageListRef} className={`message-list${messages.length === 0 ? " is-empty" : ""}`} role="log" aria-label={`Mensagens de ${roomName}`} aria-live="polite" aria-relevant="additions" tabIndex={0}>
-      {messages.length === 0 && <div className="empty-state"><span className="empty-icon"><Icon name="chat" /></span><span className="eyebrow">{roomName.toLocaleUpperCase("pt-BR")}</span><h2>Uma conversa começa com um olá.</h2><p>Nenhuma mensagem nesta sala.<br />Envie uma mensagem para iniciar a conversa.</p><span className="empty-tag">Ideias, encontros e novas conexões.</span></div>}
+      {isHistoryLoading && <p className="history-status" role="status">Carregando mensagens...</p>}
+      {!isHistoryLoading && historyError && <p className="history-status history-error" role="status">{historyError} As mensagens em tempo real continuam disponíveis quando conectado.</p>}
+      {!isHistoryLoading && !historyError && messages.length === 0 && <div className="empty-state"><span className="empty-icon"><Icon name="chat" /></span><span className="eyebrow">{roomName.toLocaleUpperCase("pt-BR")}</span><h2>Uma conversa começa com um olá.</h2><p>Nenhuma mensagem nesta sala.<br />Envie uma mensagem para iniciar a conversa.</p><span className="empty-tag">Ideias, encontros e novas conexões.</span></div>}
       {messages.map((message, index) => {
         const isOwnMessage =
           message.sender === currentUsername;

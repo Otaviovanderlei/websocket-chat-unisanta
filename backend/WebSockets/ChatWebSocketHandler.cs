@@ -9,52 +9,88 @@ namespace WebSocketChat.Api.WebSockets
     public class ChatWebSocketHandler
     {
         private readonly WebSocketConnectionManager _connectionManager;
+        private readonly ChatMessagePersistenceService _persistenceService;
 
-        public ChatWebSocketHandler(WebSocketConnectionManager connectionManager)
+        public ChatWebSocketHandler(
+            WebSocketConnectionManager connectionManager,
+            ChatMessagePersistenceService persistenceService)
         {
             _connectionManager = connectionManager;
+            _persistenceService = persistenceService;
         }
 
-        public async Task HandleAsync(WebSocket webSocket, string roomId, CancellationToken cancellationToken)
+        public async Task HandleAsync(
+            WebSocket webSocket,
+            string roomId,
+            CancellationToken cancellationToken)
         {
-            var connectionId = _connectionManager.AddSocket(webSocket, roomId);
+            var connectionId =
+                _connectionManager.AddSocket(
+                    webSocket,
+                    roomId
+                );
 
-            Console.WriteLine($"Conexão {connectionId} entrou na sala '{roomId}'.");
+            Console.WriteLine(
+                $"Conexão {connectionId} entrou na sala '{roomId}'."
+            );
 
             var buffer = new byte[4096];
 
             try
             {
-                while (webSocket.State == WebSocketState.Open)
+                while (
+                    webSocket.State ==
+                    WebSocketState.Open)
                 {
-                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                    var result =
+                        await webSocket.ReceiveAsync(
+                            new ArraySegment<byte>(
+                                buffer
+                            ),
+                            cancellationToken
+                        );
 
-                    if (result.MessageType ==
+                    if (
+                        result.MessageType ==
                         WebSocketMessageType.Close)
                     {
                         break;
                     }
 
-                    var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    var json =
+                        Encoding.UTF8.GetString(
+                            buffer,
+                            0,
+                            result.Count
+                        );
+
                     ChatMessage? message;
 
                     try
                     {
-                        message = JsonSerializer.Deserialize<ChatMessage>(json, new JsonSerializerOptions
-                        {
-                            PropertyNameCaseInsensitive = true
-                        }
+                        message =
+                            JsonSerializer.Deserialize<ChatMessage>(
+                                json,
+                                new JsonSerializerOptions
+                                {
+                                    PropertyNameCaseInsensitive = true
+                                }
                             );
                     }
                     catch (JsonException)
                     {
-                        Console.WriteLine("Mensagem recebida com JSON inválido.");
+                        Console.WriteLine(
+                            "Mensagem recebida com JSON inválido."
+                        );
 
                         continue;
                     }
 
                     if (
-                        message == null || string.IsNullOrWhiteSpace(message.Sender) || string.IsNullOrWhiteSpace(message.Content))
+                        message == null ||
+                        string.IsNullOrWhiteSpace(message.Sender) ||
+                        string.IsNullOrWhiteSpace(message.Content)
+                    )
                     {
                         continue;
                     }
@@ -62,21 +98,44 @@ namespace WebSocketChat.Api.WebSockets
                     message.RoomId = roomId;
                     message.Timestamp = DateTimeOffset.UtcNow;
 
-                    var responseJson = JsonSerializer.Serialize(message, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    }
+                    await _persistenceService.SaveAsync(
+                        message,
+                        cancellationToken
+                    );
+
+                    var responseJson =
+                        JsonSerializer.Serialize(
+                            message,
+                            new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy =
+                                    JsonNamingPolicy.CamelCase
+                            }
                         );
 
-                    Console.WriteLine($"[{roomId}] " + $"[{message.Sender}] " + $"{message.Content}");
+                    Console.WriteLine(
+                        $"[{roomId}] " +
+                        $"[{message.Sender}] " +
+                        $"{message.Content}"
+                    );
 
-                    await _connectionManager.BroadcastToRoomAsync(roomId, responseJson);
+                    await _connectionManager
+                        .BroadcastToRoomAsync(
+                            roomId,
+                            responseJson
+                        );
                 }
             }
             finally
             {
-                await _connectionManager.RemoveSocketAsync(connectionId);
-                Console.WriteLine($"Conexão {connectionId} saiu da sala '{roomId}'.");
+                await _connectionManager
+                    .RemoveSocketAsync(
+                        connectionId
+                    );
+
+                Console.WriteLine(
+                    $"Conexão {connectionId} saiu da sala '{roomId}'."
+                );
             }
         }
     }
